@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<phpunit backupGlobals="false"
+         backupStaticAttributes="false"
+         colors="true"
+         convertErrorsToExceptions="true"
+         convertNoticesToExceptions="true"
+         convertWarningsToExceptions="true"
+         processIsolation="false"
+         stopOnFailure="false"
+         syntaxCheck="false"
+         bootstrap="./bootstrap.php"
+        >
+    <testsuites>
+        <testsuite name="SO-PHP Service Registry Tests">
+            <directory>./SoPhp/</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <const name="SOME_CONST" value="Foo" />
+    </php>
+</phpunit>
