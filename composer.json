@@ -1,17 +1,14 @@
 {
     "name": "so-php/service-registry",
     "description": "Service Registry Implementation",
+    "minimum-stability": "dev",
     "autoload": {
-        "psr-4": {"SoPhp\\": "src/"}
+        "psr-4": {"SoPhp\\": "src/SoPhp"}
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "git@github.com:so-php/pubsub.git"
-        }
-    ],
-    "require-dev": {
+    "require": {
         "phpunit/phpunit": "3.7.*",
-        "so-php/pubsub": "dev-master"
+        "so-php/pubsub": "dev-master",
+        "so-php/rpc": "dev-master",
+        "zendframework/zend-db": "2.3.*@dev"
     }
 }
