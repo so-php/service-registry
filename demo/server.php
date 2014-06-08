@@ -9,7 +9,7 @@ class Greet {
     }
 }
 
-$registry = new \SoPhp\ServiceRegistry\ServiceRegistry($ch, $mongo, $pubSub);
+$registry = new \SoPhp\ServiceRegistry\ServiceRegistry($ch, $mongo);
 $endpoint = $registry->register('Greet', new Greet());
 
 echo "RPC Server started, point clients to " . $endpoint . PHP_EOL;

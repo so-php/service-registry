@@ -13,7 +13,7 @@ if(count($argv) < 2){
 }
 $name = @$argv[1] ?: uniqid('john_');
 
-$registry = new ServiceRegistry($ch, $mongo, $pubSub);
+$registry = new ServiceRegistry($ch, $mongo);
 $entries = $registry->queryForName('Greet');
 var_dump($entries);
 

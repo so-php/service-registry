@@ -4,21 +4,14 @@
 namespace SoPhp\ServiceRegistry;
 use PhpAmqpLib\Channel\AMQPChannel;
 use SoPhp\Amqp\EndpointDescriptor;
-use SoPhp\PubSub\Event;
-use SoPhp\PubSub\PubSub;
 use SoPhp\Rpc\Server;
-use SoPhp\ServiceRegistry\PubSub\Event\EjectEvent;
-use SoPhp\ServiceRegistry\PubSub\Event\GoodbyeEvent;
-use SoPhp\ServiceRegistry\PubSub\Event\RegisterEvent;
-use SoPhp\ServiceRegistry\PubSub\Event\UnregisterEvent;
-use SoPhp\ServiceRegistry\PubSub\SubscriberAbstract;
 use SoPhp\ServiceRegistry\Storage\StorageInterface;
 
 /**
  * Class ServiceRegistry
  * @package SoPhp\ServiceRegistry
  */
-class ServiceRegistry extends SubscriberAbstract implements ServiceRegistryInterface {
+class ServiceRegistry implements ServiceRegistryInterface {
     /** @var  AMQPChannel */
     protected $channel;
     /** @var string  */
@@ -27,8 +20,6 @@ class ServiceRegistry extends SubscriberAbstract implements ServiceRegistryInter
     protected $servers;
     /** @var  Entry[] */
     protected $services;
-    /** @var  PubSub */
-    protected $pubSub;
     /** @var  StorageInterface */
     protected $storage;
     /** @var array */
@@ -49,25 +40,6 @@ class ServiceRegistry extends SubscriberAbstract implements ServiceRegistryInter
     public function setChannel($channel)
     {
         $this->channel = $channel;
-        return $this;
-    }
-
-
-    /**
-     * @return PubSub
-     */
-    public function getPubSub()
-    {
-        return $this->pubSub;
-    }
-
-    /**
-     * @param PubSub $pubSub
-     * @return self
-     */
-    public function setPubSub($pubSub)
-    {
-        $this->pubSub = $pubSub;
         return $this;
     }
 
@@ -97,13 +69,11 @@ class ServiceRegistry extends SubscriberAbstract implements ServiceRegistryInter
         return $this->instanceId;
     }
 
-    public function __construct(AMQPChannel $channel, StorageInterface $storage, PubSub $pubSub){
+    public function __construct(AMQPChannel $channel, StorageInterface $storage){
         $this->instanceId = uniqid();
         $this->servers = array();
         $this->services = array();
         $this->setStorage($storage);
-        $this->setPubSub($pubSub);
-        $this->subscribe($this->getPubSub());
         $this->setChannel($channel);
     }
 
@@ -137,9 +107,6 @@ class ServiceRegistry extends SubscriberAbstract implements ServiceRegistryInter
         $entry = $this->addService($serviceName, $server->getEndpoint(), getmypid(), $server);
         $this->getStorage()->addEntry($entry);
 
-        // TODO remove, no longer necessary?
-        $this->pubSub->publish(new RegisterEvent($serviceName, $server->getEndpoint()));
-
         return $server->getEndpoint();
     }
 
@@ -155,8 +122,6 @@ class ServiceRegistry extends SubscriberAbstract implements ServiceRegistryInter
             $server = $entry->getRpcServer();
             if($instance == null || ($server && $entry->getRpcServer()->getDelegate() == $instance))
             {
-                // $server->stop(); // TODO
-                $this->pubSub->publish(new UnregisterEvent($entry->getServiceName(), $entry->getEndpoint()));
                 $this->removeService($entry->getServiceName(), $entry->getEndpoint());
             }
         }
@@ -167,7 +132,6 @@ class ServiceRegistry extends SubscriberAbstract implements ServiceRegistryInter
      */
     public function unregisterEntry(Entry $entry){
         $this->getStorage()->removeEntry($entry);
-        $this->pubSub->publish(new UnregisterEvent($entry->getServiceName(), $entry->getEndpoint()));
         $this->removeService($entry->getServiceName(), $entry->getEndpoint());
     }
 
@@ -208,63 +172,6 @@ class ServiceRegistry extends SubscriberAbstract implements ServiceRegistryInter
         return $server;
     }
 
-    /**
-     * @param Event $e
-     */
-    public function onHello(Event $e)
-    {
-        // TODO: Implement onHello() method.
-    }
-
-    /**
-     * @param Event $e
-     */
-    public function onGoodbye(Event $e)
-    {
-        /** @var GoodbyeEvent $e */
-        $e = GoodbyeEvent::fromJson($e->toJson());
-        $this->removeServices($e->getProcessId());
-
-    }
-
-    /**
-     * @param Event $e
-     */
-    public function onEject(Event $e)
-    {
-        /** @var EjectEvent $e */
-        $e = EjectEvent::fromJson($e->toJson());
-        $this->removeServices($e->getProcessId());
-
-    }
-
-    /**
-     * @param Event $e
-     */
-    public function onRegister(Event $e)
-    {
-        /** @var RegisterEvent $e */
-        $e = RegisterEvent::fromJson($e->toJson());
-        $this->addService($e->getServiceName(), $e->getEndpoint(), $e->getProcessId());
-    }
-
-    /**
-     * @param Event $e
-     */
-    public function onUnregister(Event $e)
-    {
-        /** @var UnregisterEvent $e */
-        $e = UnregisterEvent::fromJson($e->toJson());
-        $this->removeService($e->getServiceName(), $e->getEndpoint());
-    }
-
-    /**
-     * @param Event $e
-     */
-    public function onSync(Event $e)
-    {
-        // TODO: Implement onSync() method.
-    }
 
     /**
      * @param string $serviceName

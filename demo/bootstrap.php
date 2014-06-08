@@ -10,6 +10,4 @@ $ch = $conn->channel();
 
 define('EXCHANGE', 'foo-exchange');
 
-$pubSub = new PubSub($ch, EXCHANGE);
-
 $mongo = new \SoPhp\ServiceRegistry\Storage\Mongo\Mongo();
