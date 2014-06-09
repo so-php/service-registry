@@ -4,7 +4,9 @@
 namespace SoPhp\ServiceRegistry;
 use PhpAmqpLib\Channel\AMQPChannel;
 use SoPhp\Amqp\EndpointDescriptor;
+use SoPhp\Rpc\Client;
 use SoPhp\Rpc\Server;
+use SoPhp\Rpc\ServiceInterface;
 use SoPhp\ServiceRegistry\Storage\StorageInterface;
 
 /**
@@ -16,14 +18,10 @@ class ServiceRegistry implements ServiceRegistryInterface {
     protected $channel;
     /** @var string  */
     protected $instanceId;
-    /** @var  Server[] */
-    protected $servers;
-    /** @var  Entry[] */
-    protected $services;
     /** @var  StorageInterface */
     protected $storage;
-    /** @var array */
-    protected $instanceEndpointLookup = array();
+    /** @var  ServiceRegistration[] */
+    protected $localRegistrations;
 
     /**
      * @return AMQPChannel
@@ -71,8 +69,7 @@ class ServiceRegistry implements ServiceRegistryInterface {
 
     public function __construct(AMQPChannel $channel, StorageInterface $storage){
         $this->instanceId = uniqid();
-        $this->servers = array();
-        $this->services = array();
+        $this->localRegistrations = array();
         $this->setStorage($storage);
         $this->setChannel($channel);
     }
@@ -82,57 +79,45 @@ class ServiceRegistry implements ServiceRegistryInterface {
         $this->unregisterAll();
     }
 
+    // TODO
     public function unregisterAll(){
-        $this->storage->removeProcessEntries($this->getInstanceId());
-
-        foreach($this->services as $entry){
-            /** @var Entry $entry */
-            if($entry->getRpcServer()){
-                // $entry->getRpcServer()->stop();
-            }
+        $this->storage->removeProcessEntries(getmypid());
+        foreach($this->localRegistrations as $localReg)
+        {
+            //$localReg->getService()->stop();
         }
-        $this->services = array();
+
+        $this->localRegistrations = array();
     }
 
 
     /**
      * @param string $serviceName
-     * @param mixed $instance
-     * @return EndpointDescriptor
+     * @param ServiceInterface $instance
+     * @return ServiceRegistration
      */
     public function register($serviceName, $instance)
     {
         $server = $this->serveInstance($instance);
 
-        $entry = $this->addService($serviceName, $server->getEndpoint(), getmypid(), $server);
-        $this->getStorage()->addEntry($entry);
+        $registration = new ServiceRegistration($serviceName, $server, $this);
+        $this->localRegistrations[] = $registration;
+        $this->getStorage()->addEntry($registration->toEntry());
 
-        return $server->getEndpoint();
+        return $registration;
     }
 
     /**
-     * @param string $serviceName
-     * @param null|mixed $instance
+     * @param ServiceRegistration $registration
      */
-    public function unregister($serviceName, $instance = null)
+    public function unregister(ServiceRegistration $registration)
     {
-        foreach($this->services as $index => $entry) {
-            /** @var $entry Entry */
-            $this->getStorage()->removeEntry($entry);
-            $server = $entry->getRpcServer();
-            if($instance == null || ($server && $entry->getRpcServer()->getDelegate() == $instance))
-            {
-                $this->removeService($entry->getServiceName(), $entry->getEndpoint());
+        foreach($this->localRegistrations as $index => $localRegistration) {
+            if ($registration->getInstanceId() == $localRegistration->getInstanceId()) {
+                unset($this->localRegistrations[$index]);
             }
         }
-    }
-
-    /**
-     * @param Entry $entry
-     */
-    public function unregisterEntry(Entry $entry){
-        $this->getStorage()->removeEntry($entry);
-        $this->removeService($entry->getServiceName(), $entry->getEndpoint());
+        $this->getStorage()->removeEntry($registration->toEntry());
     }
 
     /**
@@ -140,24 +125,32 @@ class ServiceRegistry implements ServiceRegistryInterface {
      */
     public function query()
     {
-        return $this->getStorage()->findEntries();
+        return $this->queryForName();
     }
 
     /**
      * @param string $serviceName
-     * @return Entry[]
+     * @return ServiceRegistration[]
      */
-    public function queryForName($serviceName)
+    public function queryForName($serviceName = null)
     {
-        return $this->getStorage()->findEntries($serviceName);
-    }
+        $matches = array();
+        foreach($this->localRegistrations as $localReg)
+        {
+            if($serviceName == null || $localReg->getServiceName() == $serviceName)
+            {
+                $matches[] = $localReg;
+            }
+        }
 
-    /**
-     * @param mixed $instance
-     * @return string
-     */
-    protected function toIndex($instance){
-        return spl_object_hash($instance);
+        foreach($this->getStorage()->findEntries($serviceName) as $entry) {
+            $client = $this->proxyInstance($entry->getEndpoint());
+            $remoteReg = new ServiceRegistration($entry->getServiceName(), $client, $this);
+            $remoteReg->setProcessId($entry->getProcessId());
+            $matches[] = $remoteReg;
+        }
+
+        return $matches;
     }
 
     /**
@@ -172,53 +165,14 @@ class ServiceRegistry implements ServiceRegistryInterface {
         return $server;
     }
 
-
     /**
-     * @param string $serviceName
      * @param EndpointDescriptor $endpoint
-     * @param int $processId
-     * @param null|Server $server
-     * @return Entry
+     * @return Client
      */
-    protected function addService($serviceName, $endpoint, $processId, $server = null)
+    protected function proxyInstance(EndpointDescriptor $endpoint)
     {
-        $entry = new Entry();
-        $entry->setServiceName($serviceName);
-        $entry->setEndpoint($endpoint);
-        $entry->setProcessId($processId);
-        $entry->setRpcServer($server);
-        $this->services[] = $entry;
-        return $entry;
-    }
-
-    /**
-     * @param $serviceName
-     * @param null $endpoint
-     */
-    protected function removeService($serviceName, $endpoint = null)
-    {
-        foreach($this->services as $index => $entry)
-        {
-            if($entry->getServiceName() == $serviceName
-                && ($entry->getEndpoint() == $endpoint || $endpoint == null))
-            {
-                unset($this->services[$index]);
-            }
-        }
-    }
-
-    /**
-     * @param int $processId
-     */
-    protected function removeServices($processId)
-    {
-        foreach($this->services as $index => $entry)
-        {
-            if($entry->getProcessId() == $processId)
-            {
-                unset($this->services[$index]);
-            }
-        }
+        $proxy = new Client($endpoint, $this->getChannel());
+        return $proxy;
     }
 
 }

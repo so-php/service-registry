@@ -4,30 +4,27 @@
 namespace SoPhp\ServiceRegistry;
 
 
-use SoPhp\Amqp\EndpointDescriptor;
-
 interface ServiceRegistryInterface {
     /**
      * @param string $serviceName
      * @param mixed $instance
-     * @return EndpointDescriptor
+     * @return ServiceRegistration
      */
     public function register($serviceName, $instance);
 
     /**
-     * @param string $serviceName
-     * @param null|mixed $instance
+     * @param ServiceRegistration $registration
      */
-    public function unregister($serviceName, $instance = null);
+    public function unregister(ServiceRegistration $registration);
 
     /**
-     * @return EndpointDescriptor[]
+     * @return ServiceRegistration[]
      */
     public function query();
 
     /**
-     * @param $serviceName
-     * @return EndpointDescriptor[]
+     * @param string $serviceName
+     * @return ServiceRegistration[]
      */
     public function queryForName($serviceName);
 } 

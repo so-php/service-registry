@@ -10,9 +10,9 @@ class Greet {
 }
 
 $registry = new \SoPhp\ServiceRegistry\ServiceRegistry($ch, $mongo);
-$endpoint = $registry->register('Greet', new Greet());
+$registration = $registry->register('Greet', new Greet());
 
-echo "RPC Server started, point clients to " . $endpoint . PHP_EOL;
+echo "RPC Server started, point clients to " . $registration->getService()->getEndpoint() . PHP_EOL;
 
 while(count($ch->callbacks)){
     $ch->wait();

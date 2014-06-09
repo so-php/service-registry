@@ -6,27 +6,16 @@ namespace SoPhp\ServiceRegistry;
 
 use SoPhp\Amqp\EndpointDescriptor;
 use SoPhp\Rpc\Server;
-use SoPhp\ServiceRegistry\PubSub\Event\RegisterEvent;
 
 class Entry {
-    /** @var  int */
+    /** @var  string */
     protected $processId;
+    /** @var  string */
+    protected $instanceId;
     /** @var  string */
     protected $serviceName;
     /** @var  EndpointDescriptor */
     protected $endpoint;
-    /** @var  Server */
-    protected $rpcServer;
-
-    /**
-     * @param RegisterEvent $e
-     */
-    public static function fromRegisterEvent(RegisterEvent $e){
-        $entry = new self();
-        $entry->setProcessId($e->getProcessId());
-        $entry->setServiceName($e->getServiceName());
-        $entry->setEndpoint($e->getEndpoint());
-    }
 
     /**
      * @return EndpointDescriptor
@@ -47,7 +36,25 @@ class Entry {
     }
 
     /**
-     * @return int
+     * @return string
+     */
+    public function getInstanceId()
+    {
+        return $this->instanceId;
+    }
+
+    /**
+     * @param string $instanceId
+     * @return self
+     */
+    public function setInstanceId($instanceId)
+    {
+        $this->instanceId = $instanceId;
+        return $this;
+    }
+
+    /**
+     * @return string
      */
     public function getProcessId()
     {
@@ -55,30 +62,12 @@ class Entry {
     }
 
     /**
-     * @param int $processId
+     * @param string $processId
      * @return self
      */
     public function setProcessId($processId)
     {
         $this->processId = $processId;
-        return $this;
-    }
-
-    /**
-     * @return Server|null
-     */
-    public function getRpcServer()
-    {
-        return $this->rpcServer;
-    }
-
-    /**
-     * @param Server $rpcServer
-     * @return self
-     */
-    public function setRpcServer($rpcServer)
-    {
-        $this->rpcServer = $rpcServer;
         return $this;
     }
 
@@ -107,6 +96,7 @@ class Entry {
     public function toStorageArray(){
         return array(
             'processId' => $this->getProcessId(),
+            'instanceId' => $this->getInstanceId(),
             'serviceName' => $this->getServiceName(),
             'endpoint' => $this->getEndpoint()->toJson()
         );
@@ -120,6 +110,7 @@ class Entry {
         $entry = new self();
         $entry->setEndpoint(EndpointDescriptor::fromJson($data['endpoint']));
         $entry->setProcessId($data['processId']);
+        $entry->setInstanceId($data['instanceId']);
         $entry->setServiceName($data['serviceName']);
         return $entry;
     }

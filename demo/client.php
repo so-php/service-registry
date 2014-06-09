@@ -14,19 +14,17 @@ if(count($argv) < 2){
 $name = @$argv[1] ?: uniqid('john_');
 
 $registry = new ServiceRegistry($ch, $mongo);
-$entries = $registry->queryForName('Greet');
-var_dump($entries);
+$registrations = $registry->queryForName('Greet');
 
-foreach($entries as $entry){
-    /** @var Entry $entry */
-    $endpoint = $entry->getEndpoint();
-    $client = new Client($endpoint, $ch);
+foreach($registrations as $registration)
+{
+    $endpoint = $registration->getService()->getEndpoint();
     try {
-        echo "Attempt to call 'hello' on `{$entry->getServiceName()}`` for instance {$entry->getProcessId()}\n";
-        echo $client->call('hello', $name) . PHP_EOL;
+        echo "Attempt to call 'hello' on `{$registration->getServiceName()}`` for instance {$registration->getProcessId()}\n";
+        echo $registration->getService()->call('hello', $name) . PHP_EOL;
     } catch (TimeoutException $e){
-        echo "Unregistered {$entry->getServiceName()} for instance ".$entry->getProcessId()."\n";
-        $registry->unregisterEntry($entry);
+        echo "Unregistered {$registration->getServiceName()} for instance ".$registration->getProcessId()."\n";
+        $registration->unregister();
     }
 }
 echo "done";

@@ -85,6 +85,7 @@ class Mongo implements StorageInterface {
         $document = $entry->toStorageArray();
         $data = array(
             'processId' => $entry->getProcessId(),
+            'instanceId' => $entry->getInstanceId(),
             'serviceName' => $entry->getServiceName(),
             'endpoint' => $entry->getEndpoint()->toJson(),
         );
@@ -96,7 +97,7 @@ class Mongo implements StorageInterface {
      */
     public function removeEntry(Entry $entry)
     {
-        $this->getCollection()->remove(array(
+        $r = $this->getCollection()->remove(array(
             'processId' => $entry->getProcessId(),
             'serviceName' => $entry->getServiceName(),
             'endpoint' => $entry->getEndpoint()->toJson(),
