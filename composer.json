@@ -9,6 +9,7 @@
         "phpunit/phpunit": "3.7.*",
         "so-php/pubsub": "dev-master",
         "so-php/rpc": "dev-master",
-        "zendframework/zend-db": "2.3.*@dev"
+        "zendframework/zend-db": "2.3.*@dev",
+        "zendframework/zend-servicemanager": "2.3.*@dev"
     }
 }
