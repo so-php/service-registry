@@ -7,8 +7,8 @@
     },
     "require": {
         "phpunit/phpunit": "3.7.*",
-        "so-php/pubsub": "dev-master",
-        "so-php/rpc": "dev-master",
+        "so-php/pubsub": "~0.0-alpha",
+        "so-php/rpc": "~0.0-alpha",
         "zendframework/zend-db": "2.3.*@dev",
         "zendframework/zend-servicemanager": "2.3.*@dev"
     }
